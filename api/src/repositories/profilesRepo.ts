@@ -39,7 +39,7 @@ export class ProfilesRepository {
   }
 
   /**
-   * Convert integer fields to boolean for SQLite compatibility
+   * Convert integer fields to boolean for SQLite compatibility (reading from DB)
    */
   private convertBooleanFields(profile: Profile): Profile {
     return {
@@ -49,11 +49,22 @@ export class ProfilesRepository {
   }
 
   /**
+   * Convert boolean fields to integers for SQLite storage (writing to DB)
+   */
+  private serializeForDB<T extends { isActive?: boolean }>(data: T): Record<string, unknown> {
+    const result: Record<string, unknown> = { ...data };
+    if (typeof result.isActive === 'boolean') {
+      result.isActive = result.isActive ? 1 : 0;
+    }
+    return result;
+  }
+
+  /**
    * Create a new profile
    */
   async create(profile: Omit<Profile, 'profileId'>): Promise<Profile> {
     try {
-      const { sql, values } = buildInsertSQL('profiles', profile);
+      const { sql, values } = buildInsertSQL('profiles', this.serializeForDB(profile));
       const result = await this.db.run(sql, values);
 
       const createdProfile = await this.findById(result.lastID || 0);
@@ -72,7 +83,7 @@ export class ProfilesRepository {
    */
   async update(id: number, profile: Partial<Omit<Profile, 'profileId'>>): Promise<Profile> {
     try {
-      const { sql, values } = buildUpdateSQL('profiles', profile, 'profile_id = ?');
+      const { sql, values } = buildUpdateSQL('profiles', this.serializeForDB(profile), 'profile_id = ?');
       const result = await this.db.run(sql, [...values, id]);
 
       if (result.changes === 0) {
