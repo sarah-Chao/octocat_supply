@@ -15,19 +15,26 @@ export function TermsDownload() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/legal/terms`)
+    const controller = new AbortController();
+
+    fetch(`${API_BASE_URL}/api/legal/terms`, { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch documents');
         return res.json();
       })
       .then(data => {
         setDocuments(data);
-        setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        if (err.name !== 'AbortError') {
+          setError(err.message);
+        }
+      })
+      .finally(() => {
         setLoading(false);
       });
+
+    return () => controller.abort();
   }, []);
 
   const buildDownloadUrl = (filename: string, language: string) => `${API_BASE_URL}/api/legal/terms/download?file=${encodeURIComponent(filename)}&lang=${encodeURIComponent(language)}`;

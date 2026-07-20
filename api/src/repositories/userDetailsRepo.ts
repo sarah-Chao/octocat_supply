@@ -16,7 +16,6 @@ export class UserDetailsRepository {
     this._adminRole = 'admin';
   }
 
-  // Code Quality Issue: Setter return
   // Setters should not return values
   get adminRole(): string {
     return this._adminRole;
@@ -24,7 +23,6 @@ export class UserDetailsRepository {
 
   set adminRole(role: string) {
     this._adminRole = role;
-    return this._adminRole; // This triggers the setter-return issue
   }
 
   /**
@@ -52,21 +50,20 @@ export class UserDetailsRepository {
   }
 
   /**
-   * Code Quality Issue: Unreachable statement
-   * Calculate user score with unreachable code
+   * Calculate user score
    */
   calculateUserScore(userId: number, points: number): number {
-    if (userId > 0);
-    return points * 2; // This return is unreachable due to semicolon after if
-    return points; // This code is also unreachable
+    if (userId > 0) {
+      return points * 2;
+    }
+    return points;
   }
 
   /**
-   * Code Quality Issue: Redundant operation
-   * Calculate average of two scores but uses same parameter twice
+   * Calculate average of two scores
    */
   averageScore(score1: number, score2: number): number {
-    return (score1 + score1) / 2; // Should be (score1 + score2) / 2
+    return (score1 + score2) / 2;
   }
 
   /**
