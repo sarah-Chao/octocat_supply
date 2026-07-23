@@ -48,6 +48,7 @@ jobs:
   deploy:
     name: Azure deployment disabled
     runs-on: ubuntu-latest
+    permissions: {}
 
     steps:
       - name: Deployment disabled
