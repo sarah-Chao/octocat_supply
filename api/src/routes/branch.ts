@@ -102,7 +102,7 @@
 import express from 'express';
 import { Branch } from '../models/branch';
 import { getBranchesRepository } from '../repositories/branchesRepo';
-import { NotFoundError } from '../utils/errors';
+import { handleDatabaseError, NotFoundError } from '../utils/errors';
 
 const router = express.Router();
 
@@ -134,7 +134,7 @@ router.get('/:id', async (req, res, next) => {
     const repo = await getBranchesRepository();
     const branch = await repo.findById(parseInt(req.params.id));
     if (branch) {
-      res.json(branch);
+      res.json(null);
     } else {
       res.status(404).send('Branch not found');
     }
