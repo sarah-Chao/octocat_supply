@@ -157,3 +157,85 @@ describe('PurchaseOrder API contract (US2)', () => {
     expect(response.body.error.code).toBe('FORBIDDEN');
   });
 });
+
+describe('PurchaseOrder API contract (US3)', () => {
+  beforeEach(async () => {
+    process.env.NODE_ENV = 'test';
+    await closeDatabase();
+    await getDatabase(true);
+    await runMigrations(true);
+    await seedDependencies();
+
+    app = express();
+    app.use(express.json());
+    app.use('/purchase-orders', purchaseOrderRouter);
+    app.use(errorHandler);
+  });
+
+  afterEach(async () => {
+    await closeDatabase();
+  });
+
+  it('US3: GET /purchase-orders/{id} returns lifecycle details', async () => {
+    const created = await request(app).post('/purchase-orders').send({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 101,
+      lineItems: [{ productId: 1, quantity: 2, expectedUnitPrice: 75 }],
+    });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/submit`)
+      .send({ actorUserId: 101 });
+
+    const response = await request(app).get(`/purchase-orders/${created.body.purchaseOrderId}`);
+
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body.transitions)).toBe(true);
+    expect(Array.isArray(response.body.notificationEvents)).toBe(true);
+  });
+
+  it('US3: POST /purchase-orders/{id}/fulfill returns 200 after approval', async () => {
+    const created = await request(app).post('/purchase-orders').send({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 101,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 75 }],
+    });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/submit`)
+      .send({ actorUserId: 101 });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/approval-decisions`)
+      .send({ approverUserId: 202, decision: 'Approved' });
+
+    const response = await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/fulfill`)
+      .send({ actorUserId: 303 });
+
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('Fulfilled');
+  });
+
+  it('US3: POST /purchase-orders/{id}/cancel returns 200 for submitted orders', async () => {
+    const created = await request(app).post('/purchase-orders').send({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 101,
+      lineItems: [{ productId: 1, quantity: 2, expectedUnitPrice: 75 }],
+    });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/submit`)
+      .send({ actorUserId: 101 });
+
+    const response = await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/cancel`)
+      .send({ actorUserId: 404, reason: 'Supplier unavailable' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('Cancelled');
+  });
+});

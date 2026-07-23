@@ -100,16 +100,16 @@
 
 ### Tests for User Story 3 (REQUIRED) ⚠️
 
-- [ ] T029 [P] [US3] Add contract test for get, fulfill, and cancel lifecycle endpoints in api/src/routes/purchaseOrder.contract.test.ts
-- [ ] T030 [P] [US3] Add route integration tests for lifecycle history retrieval and fulfill/cancel transitions in api/src/routes/purchaseOrder.test.ts
-- [ ] T031 [P] [US3] Add repository integration tests for notification-event uniqueness and immutable terminal states in api/src/repositories/purchaseOrdersRepo.test.ts
+- [x] T029 [P] [US3] Add contract test for get, fulfill, and cancel lifecycle endpoints in api/src/routes/purchaseOrder.contract.test.ts
+- [x] T030 [P] [US3] Add route integration tests for lifecycle history retrieval and fulfill/cancel transitions in api/src/routes/purchaseOrder.test.ts
+- [x] T031 [P] [US3] Add repository integration tests for notification-event uniqueness and immutable terminal states in api/src/repositories/purchaseOrdersRepo.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T032 [US3] Implement get purchase-order details endpoint including transitions and notification metadata in api/src/routes/purchaseOrder.ts
-- [ ] T033 [US3] Implement fulfill and cancel endpoint handlers in api/src/routes/purchaseOrder.ts
-- [ ] T034 [US3] Implement Approved->Fulfilled and Draft/Submitted->Cancelled transition rules with terminal-state guards in api/src/repositories/purchaseOrdersRepo.ts
-- [ ] T035 [US3] Implement lifecycle history query and response mapping in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T032 [US3] Implement get purchase-order details endpoint including transitions and notification metadata in api/src/routes/purchaseOrder.ts
+- [x] T033 [US3] Implement fulfill and cancel endpoint handlers in api/src/routes/purchaseOrder.ts
+- [x] T034 [US3] Implement Approved->Fulfilled and Draft/Submitted->Cancelled transition rules with terminal-state guards in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T035 [US3] Implement lifecycle history query and response mapping in api/src/repositories/purchaseOrdersRepo.ts
 
 **Checkpoint**: All user stories are independently functional.
 

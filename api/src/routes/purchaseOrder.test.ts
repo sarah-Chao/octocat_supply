@@ -216,3 +216,122 @@ describe('PurchaseOrder API US2', () => {
     expect(submitResponse.body.approvalRequired).toBe(false);
   });
 });
+
+describe('PurchaseOrder API US3', () => {
+  beforeEach(async () => {
+    process.env.NODE_ENV = 'test';
+    await closeDatabase();
+    await getDatabase(true);
+    await runMigrations(true);
+    await seedDependencies();
+
+    app = express();
+    app.use(express.json());
+    app.use('/purchase-orders', purchaseOrderRouter);
+    app.use(errorHandler);
+  });
+
+  afterEach(async () => {
+    await closeDatabase();
+  });
+
+  it('returns lifecycle history with notification metadata after submission', async () => {
+    const created = await request(app).post('/purchase-orders').send({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 2, expectedUnitPrice: 75 }],
+    });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/submit`)
+      .send({ actorUserId: 100 });
+
+    const response = await request(app).get(`/purchase-orders/${created.body.purchaseOrderId}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.transitions.map((x: { toStatus: string }) => x.toStatus)).toEqual([
+      'Draft',
+      'Submitted',
+    ]);
+    expect(response.body.notificationEvents).toHaveLength(1);
+    expect(response.body.notificationEvents[0].eventType).toBe('PO_SUBMITTED');
+    expect(response.body.notificationEvents[0].dispatchStatus).toBe('Succeeded');
+  });
+
+  it('fulfills approved purchase order and records transition', async () => {
+    const created = await request(app).post('/purchase-orders').send({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 75 }],
+    });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/submit`)
+      .send({ actorUserId: 100 });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/approval-decisions`)
+      .send({ approverUserId: 200, decision: 'Approved' });
+
+    const fulfillResponse = await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/fulfill`)
+      .send({ actorUserId: 300 });
+
+    expect(fulfillResponse.status).toBe(200);
+    expect(fulfillResponse.body.status).toBe('Fulfilled');
+    expect(
+      fulfillResponse.body.transitions[fulfillResponse.body.transitions.length - 1].toStatus,
+    ).toBe('Fulfilled');
+  });
+
+  it('cancels submitted purchase order and records transition', async () => {
+    const created = await request(app).post('/purchase-orders').send({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 2, expectedUnitPrice: 75 }],
+    });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/submit`)
+      .send({ actorUserId: 100 });
+
+    const cancelResponse = await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/cancel`)
+      .send({ actorUserId: 400, reason: 'Buyer requested cancellation' });
+
+    expect(cancelResponse.status).toBe(200);
+    expect(cancelResponse.body.status).toBe('Cancelled');
+    expect(
+      cancelResponse.body.transitions[cancelResponse.body.transitions.length - 1].toStatus,
+    ).toBe('Cancelled');
+  });
+
+  it('blocks state changes from terminal statuses', async () => {
+    const created = await request(app).post('/purchase-orders').send({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 75 }],
+    });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/submit`)
+      .send({ actorUserId: 100 });
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/approval-decisions`)
+      .send({ approverUserId: 200, decision: 'Approved' });
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/fulfill`)
+      .send({ actorUserId: 300 });
+
+    const cancelAfterFulfilled = await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/cancel`)
+      .send({ actorUserId: 400, reason: 'Too late' });
+
+    expect(cancelAfterFulfilled.status).toBe(409);
+    expect(cancelAfterFulfilled.body.error.code).toBe('CONFLICT');
+  });
+});

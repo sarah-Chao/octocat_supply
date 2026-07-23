@@ -558,6 +558,161 @@ export class PurchaseOrdersRepository {
     }
   }
 
+  async fulfillPurchaseOrder(
+    purchaseOrderId: number,
+    actorUserId: number,
+  ): Promise<PurchaseOrder> {
+    try {
+      if (!Number.isInteger(actorUserId) || actorUserId <= 0) {
+        throw new ValidationError('actorUserId must be a positive integer');
+      }
+
+      const tx = this.db.db.transaction(() => {
+        const orderRow = this.db.db
+          .prepare('SELECT * FROM purchase_orders WHERE purchase_order_id = ?')
+          .get(purchaseOrderId) as DatabaseRow | undefined;
+
+        if (!orderRow) {
+          throw new NotFoundError('PurchaseOrder', purchaseOrderId);
+        }
+
+        const order = objectToCamelCase<PurchaseOrderRow>(orderRow);
+
+        if (order.status !== 'Approved') {
+          throw new ConflictError(
+            `Purchase order ${purchaseOrderId} cannot be fulfilled from status ${order.status}`,
+          );
+        }
+
+        const now = this.nowIso();
+
+        this.db.db
+          .prepare(
+            `UPDATE purchase_orders
+             SET status = 'Fulfilled',
+                 fulfilled_at = ?,
+                 updated_at = ?
+             WHERE purchase_order_id = ?`,
+          )
+          .run(now, now, purchaseOrderId);
+
+        this.db.db
+          .prepare(
+            `INSERT INTO purchase_order_status_transitions (
+              purchase_order_id,
+              from_status,
+              to_status,
+              changed_by_user_id,
+              changed_at,
+              reason
+            ) VALUES (?, 'Approved', 'Fulfilled', ?, ?, ?)`,
+          )
+          .run(purchaseOrderId, actorUserId, now, 'PO fulfilled');
+      });
+
+      tx();
+
+      const fulfilled = await this.findById(purchaseOrderId);
+      if (!fulfilled) {
+        throw new DatabaseError('Failed to retrieve fulfilled purchase order');
+      }
+
+      return fulfilled;
+    } catch (error) {
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError ||
+        error instanceof DatabaseError
+      ) {
+        throw error;
+      }
+      handleDatabaseError(error);
+    }
+  }
+
+  async cancelPurchaseOrder(
+    purchaseOrderId: number,
+    actorUserId: number,
+    reason?: string,
+  ): Promise<PurchaseOrder> {
+    try {
+      if (!Number.isInteger(actorUserId) || actorUserId <= 0) {
+        throw new ValidationError('actorUserId must be a positive integer');
+      }
+
+      const normalizedReason = reason && reason.trim() !== '' ? reason.trim() : null;
+
+      const tx = this.db.db.transaction(() => {
+        const orderRow = this.db.db
+          .prepare('SELECT * FROM purchase_orders WHERE purchase_order_id = ?')
+          .get(purchaseOrderId) as DatabaseRow | undefined;
+
+        if (!orderRow) {
+          throw new NotFoundError('PurchaseOrder', purchaseOrderId);
+        }
+
+        const order = objectToCamelCase<PurchaseOrderRow>(orderRow);
+
+        if (order.status !== 'Draft' && order.status !== 'Submitted') {
+          throw new ConflictError(
+            `Purchase order ${purchaseOrderId} cannot be cancelled from status ${order.status}`,
+          );
+        }
+
+        const now = this.nowIso();
+
+        this.db.db
+          .prepare(
+            `UPDATE purchase_orders
+             SET status = 'Cancelled',
+                 cancelled_at = ?,
+                 updated_at = ?
+             WHERE purchase_order_id = ?`,
+          )
+          .run(now, now, purchaseOrderId);
+
+        this.db.db
+          .prepare(
+            `INSERT INTO purchase_order_status_transitions (
+              purchase_order_id,
+              from_status,
+              to_status,
+              changed_by_user_id,
+              changed_at,
+              reason
+            ) VALUES (?, ?, 'Cancelled', ?, ?, ?)`,
+          )
+          .run(
+            purchaseOrderId,
+            order.status,
+            actorUserId,
+            now,
+            normalizedReason || 'PO cancelled',
+          );
+      });
+
+      tx();
+
+      const cancelled = await this.findById(purchaseOrderId);
+      if (!cancelled) {
+        throw new DatabaseError('Failed to retrieve cancelled purchase order');
+      }
+
+      return cancelled;
+    } catch (error) {
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError ||
+        error instanceof DatabaseError
+      ) {
+        throw error;
+      }
+      handleDatabaseError(error);
+    }
+  }
+
   async exists(id: number): Promise<boolean> {
     try {
       const result = await this.db.get<{ count: number }>(

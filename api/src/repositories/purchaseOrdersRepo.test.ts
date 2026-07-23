@@ -5,7 +5,7 @@ import {
 } from './purchaseOrdersRepo';
 import { closeDatabase, getDatabase } from '../db/sqlite';
 import { runMigrations } from '../db/migrate';
-import { DatabaseError } from '../utils/errors';
+import { ConflictError, DatabaseError } from '../utils/errors';
 
 async function seedDependencies(): Promise<void> {
   const db = await getDatabase(true);
@@ -195,5 +195,102 @@ describe('PurchaseOrdersRepository integration', () => {
     expect(decided.status).toBe('Cancelled');
     expect(decided.approvalDecision?.decision).toBe('Rejected');
     expect(decided.transitions[decided.transitions.length - 1].toStatus).toBe('Cancelled');
+  });
+
+  it('US3: keeps exactly one successful notification event on repeated submit', async () => {
+    const created = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 1, expectedUnitPrice: 50 }],
+    });
+
+    await repo.submitDraft(created.purchaseOrderId, 100);
+    const secondSubmit = await repo.submitDraft(created.purchaseOrderId, 100);
+
+    const successEvents = secondSubmit.notificationEvents.filter(
+      (event) => event.eventType === 'PO_SUBMITTED' && event.dispatchStatus === 'Succeeded',
+    );
+
+    expect(successEvents).toHaveLength(1);
+    expect(secondSubmit.transitions.map((t) => t.toStatus)).toEqual(['Draft', 'Submitted']);
+  });
+
+  it('US3: fulfills approved purchase order', async () => {
+    const created = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 50 }],
+    });
+
+    await repo.submitDraft(created.purchaseOrderId, 100);
+    await repo.decideApproval(created.purchaseOrderId, {
+      approverUserId: 200,
+      decision: 'Approved',
+    });
+
+    const fulfilled = await repo.fulfillPurchaseOrder(created.purchaseOrderId, 300);
+
+    expect(fulfilled.status).toBe('Fulfilled');
+    expect(fulfilled.fulfilledAt).toBeTruthy();
+    expect(fulfilled.transitions[fulfilled.transitions.length - 1].toStatus).toBe('Fulfilled');
+  });
+
+  it('US3: cancels draft or submitted purchase order', async () => {
+    const created = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 2, expectedUnitPrice: 50 }],
+    });
+
+    const cancelledDraft = await repo.cancelPurchaseOrder(
+      created.purchaseOrderId,
+      400,
+      'No longer needed',
+    );
+    expect(cancelledDraft.status).toBe('Cancelled');
+
+    const another = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 2, expectedUnitPrice: 50 }],
+    });
+    await repo.submitDraft(another.purchaseOrderId, 100);
+
+    const cancelledSubmitted = await repo.cancelPurchaseOrder(
+      another.purchaseOrderId,
+      401,
+      'Supplier issue',
+    );
+
+    expect(cancelledSubmitted.status).toBe('Cancelled');
+    expect(cancelledSubmitted.cancelledAt).toBeTruthy();
+  });
+
+  it('US3: enforces terminal-state immutability', async () => {
+    const created = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 50 }],
+    });
+
+    await repo.submitDraft(created.purchaseOrderId, 100);
+    await repo.decideApproval(created.purchaseOrderId, {
+      approverUserId: 200,
+      decision: 'Approved',
+    });
+    await repo.fulfillPurchaseOrder(created.purchaseOrderId, 300);
+
+    await expect(
+      repo.cancelPurchaseOrder(created.purchaseOrderId, 400, 'Too late'),
+    ).rejects.toThrow(ConflictError);
+
+    await expect(
+      repo.fulfillPurchaseOrder(created.purchaseOrderId, 300),
+    ).rejects.toThrow(ConflictError);
   });
 });

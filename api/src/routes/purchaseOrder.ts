@@ -78,6 +78,42 @@
  *         description: Purchase order not found
  *       409:
  *         description: Invalid state transition
+ *
+ * /api/purchase-orders/{id}/fulfill:
+ *   post:
+ *     summary: Mark an approved purchase order as fulfilled
+ *     tags: [PurchaseOrders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Purchase order fulfilled
+ *       404:
+ *         description: Purchase order not found
+ *       409:
+ *         description: Invalid state transition
+ *
+ * /api/purchase-orders/{id}/cancel:
+ *   post:
+ *     summary: Cancel a draft or submitted purchase order
+ *     tags: [PurchaseOrders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Purchase order cancelled
+ *       404:
+ *         description: Purchase order not found
+ *       409:
+ *         description: Invalid state transition
  */
 
 import express from 'express';
@@ -182,6 +218,55 @@ router.post('/:id/approval-decisions', async (req, res, next) => {
     });
 
     res.json(decided);
+  } catch (error) {
+    if (
+      error instanceof ValidationError ||
+      error instanceof NotFoundError ||
+      error instanceof ConflictError ||
+      error instanceof DatabaseError
+    ) {
+      next(error);
+      return;
+    }
+
+    next(error);
+  }
+});
+
+router.post('/:id/fulfill', async (req, res, next) => {
+  try {
+    const purchaseOrderId = parseId(req.params.id);
+    const actorUserId = Number(req.body?.actorUserId);
+
+    const repo = await getPurchaseOrdersRepository();
+    const fulfilled = await repo.fulfillPurchaseOrder(purchaseOrderId, actorUserId);
+
+    res.json(fulfilled);
+  } catch (error) {
+    if (
+      error instanceof ValidationError ||
+      error instanceof NotFoundError ||
+      error instanceof ConflictError ||
+      error instanceof DatabaseError
+    ) {
+      next(error);
+      return;
+    }
+
+    next(error);
+  }
+});
+
+router.post('/:id/cancel', async (req, res, next) => {
+  try {
+    const purchaseOrderId = parseId(req.params.id);
+    const actorUserId = Number(req.body?.actorUserId);
+    const reason = req.body?.reason;
+
+    const repo = await getPurchaseOrdersRepository();
+    const cancelled = await repo.cancelPurchaseOrder(purchaseOrderId, actorUserId, reason);
+
+    res.json(cancelled);
   } catch (error) {
     if (
       error instanceof ValidationError ||
