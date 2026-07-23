@@ -58,6 +58,26 @@
  *         description: Invalid status transition
  *       502:
  *         description: Supplier notification dispatch failed
+ *
+ * /api/purchase-orders/{id}/approval-decisions:
+ *   post:
+ *     summary: Apply approval decision for a submitted purchase order
+ *     tags: [PurchaseOrders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Approval decision applied
+ *       403:
+ *         description: Approval forbidden due to separation-of-duties policy
+ *       404:
+ *         description: Purchase order not found
+ *       409:
+ *         description: Invalid state transition
  */
 
 import express from 'express';
@@ -132,6 +152,36 @@ router.post('/:id/submit', async (req, res, next) => {
     });
 
     res.json(submitted);
+  } catch (error) {
+    if (
+      error instanceof ValidationError ||
+      error instanceof NotFoundError ||
+      error instanceof ConflictError ||
+      error instanceof DatabaseError
+    ) {
+      next(error);
+      return;
+    }
+
+    next(error);
+  }
+});
+
+router.post('/:id/approval-decisions', async (req, res, next) => {
+  try {
+    const purchaseOrderId = parseId(req.params.id);
+    const approverUserId = Number(req.body?.approverUserId);
+    const decision = req.body?.decision;
+    const reason = req.body?.reason;
+
+    const repo = await getPurchaseOrdersRepository();
+    const decided = await repo.decideApproval(purchaseOrderId, {
+      approverUserId,
+      decision,
+      reason,
+    });
+
+    res.json(decided);
   } catch (error) {
     if (
       error instanceof ValidationError ||

@@ -77,16 +77,16 @@
 
 ### Tests for User Story 2 (REQUIRED) ⚠️
 
-- [ ] T022 [P] [US2] Add contract test for approval decision endpoint in api/src/routes/purchaseOrder.contract.test.ts
-- [ ] T023 [P] [US2] Add route integration tests for approval/rejection and creator-blocked approval in api/src/routes/purchaseOrder.test.ts
-- [ ] T024 [P] [US2] Add repository integration tests for threshold logic and separation-of-duties enforcement in api/src/repositories/purchaseOrdersRepo.test.ts
+- [x] T022 [P] [US2] Add contract test for approval decision endpoint in api/src/routes/purchaseOrder.contract.test.ts
+- [x] T023 [P] [US2] Add route integration tests for approval/rejection and creator-blocked approval in api/src/routes/purchaseOrder.test.ts
+- [x] T024 [P] [US2] Add repository integration tests for threshold logic and separation-of-duties enforcement in api/src/repositories/purchaseOrdersRepo.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Implement approval decision route handler in api/src/routes/purchaseOrder.ts
-- [ ] T026 [US2] Implement high-value approval-required evaluation (>10000) in api/src/repositories/purchaseOrdersRepo.ts
-- [ ] T027 [US2] Implement separation-of-duties authorization and decision recording in api/src/repositories/purchaseOrdersRepo.ts
-- [ ] T028 [US2] Implement Submitted->Approved and Submitted->Cancelled transition writes in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T025 [US2] Implement approval decision route handler in api/src/routes/purchaseOrder.ts
+- [x] T026 [US2] Implement high-value approval-required evaluation (>10000) in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T027 [US2] Implement separation-of-duties authorization and decision recording in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T028 [US2] Implement Submitted->Approved and Submitted->Cancelled transition writes in api/src/repositories/purchaseOrdersRepo.ts
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
 

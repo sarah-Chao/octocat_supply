@@ -113,4 +113,87 @@ describe('PurchaseOrdersRepository integration', () => {
     expect(refreshed?.notificationEvents).toHaveLength(0);
     expect(refreshed?.transitions).toHaveLength(1);
   });
+
+  it('US2: marks approvalRequired true when submitted total is greater than 10000', async () => {
+    const created = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 201, expectedUnitPrice: 50 }],
+    });
+
+    const submitted = await repo.submitDraft(created.purchaseOrderId, 100);
+    expect(submitted.approvalRequired).toBe(true);
+    expect(submitted.totalAmount).toBe(10050);
+  });
+
+  it('US2: keeps approvalRequired false when submitted total equals 10000', async () => {
+    const created = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 200, expectedUnitPrice: 50 }],
+    });
+
+    const submitted = await repo.submitDraft(created.purchaseOrderId, 100);
+    expect(submitted.approvalRequired).toBe(false);
+    expect(submitted.totalAmount).toBe(10000);
+  });
+
+  it('US2: rejects creator self-approval when approval is required', async () => {
+    const created = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 50 }],
+    });
+    await repo.submitDraft(created.purchaseOrderId, 100);
+
+    await expect(
+      repo.decideApproval(created.purchaseOrderId, {
+        approverUserId: 100,
+        decision: 'Approved',
+      }),
+    ).rejects.toThrow(DatabaseError);
+  });
+
+  it('US2: allows non-creator approval and transitions to Approved', async () => {
+    const created = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 50 }],
+    });
+    await repo.submitDraft(created.purchaseOrderId, 100);
+
+    const decided = await repo.decideApproval(created.purchaseOrderId, {
+      approverUserId: 200,
+      decision: 'Approved',
+    });
+
+    expect(decided.status).toBe('Approved');
+    expect(decided.approvalDecision?.approverUserId).toBe(200);
+    expect(decided.approvalDecision?.decision).toBe('Approved');
+    expect(decided.transitions[decided.transitions.length - 1].toStatus).toBe('Approved');
+  });
+
+  it('US2: supports rejection and transitions to Cancelled', async () => {
+    const created = await repo.createDraft({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 100,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 50 }],
+    });
+    await repo.submitDraft(created.purchaseOrderId, 100);
+
+    const decided = await repo.decideApproval(created.purchaseOrderId, {
+      approverUserId: 201,
+      decision: 'Rejected',
+      reason: 'Budget denied',
+    });
+
+    expect(decided.status).toBe('Cancelled');
+    expect(decided.approvalDecision?.decision).toBe('Rejected');
+    expect(decided.transitions[decided.transitions.length - 1].toStatus).toBe('Cancelled');
+  });
 });

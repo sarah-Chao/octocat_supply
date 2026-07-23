@@ -30,6 +30,12 @@ type SubmissionOptions = {
   forceNotificationFailure?: boolean;
 };
 
+type ApprovalDecisionInput = {
+  approverUserId: number;
+  decision: 'Approved' | 'Rejected';
+  reason?: string;
+};
+
 type NotificationDispatcher = (
   context: DispatchContext,
   options?: SubmissionOptions,
@@ -404,6 +410,141 @@ export class PurchaseOrdersRepository {
       }
 
       return submitted;
+    } catch (error) {
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError ||
+        error instanceof DatabaseError
+      ) {
+        throw error;
+      }
+      handleDatabaseError(error);
+    }
+  }
+
+  async decideApproval(
+    purchaseOrderId: number,
+    input: ApprovalDecisionInput,
+  ): Promise<PurchaseOrder> {
+    try {
+      if (!Number.isInteger(input.approverUserId) || input.approverUserId <= 0) {
+        throw new ValidationError('approverUserId must be a positive integer');
+      }
+
+      if (input.decision !== 'Approved' && input.decision !== 'Rejected') {
+        throw new ValidationError('decision must be Approved or Rejected');
+      }
+
+      if (input.decision === 'Rejected' && (!input.reason || input.reason.trim() === '')) {
+        throw new ValidationError('reason is required when decision is Rejected');
+      }
+
+      const tx = this.db.db.transaction(() => {
+        const orderRow = this.db.db
+          .prepare('SELECT * FROM purchase_orders WHERE purchase_order_id = ?')
+          .get(purchaseOrderId) as DatabaseRow | undefined;
+
+        if (!orderRow) {
+          throw new NotFoundError('PurchaseOrder', purchaseOrderId);
+        }
+
+        const order = objectToCamelCase<PurchaseOrderRow>(orderRow);
+
+        if (order.status !== 'Submitted') {
+          throw new ConflictError(
+            `Purchase order ${purchaseOrderId} cannot be approved from status ${order.status}`,
+          );
+        }
+
+        const hasExistingDecision = this.db.db
+          .prepare('SELECT COUNT(*) as count FROM purchase_order_approval_decisions WHERE purchase_order_id = ?')
+          .get(purchaseOrderId) as { count?: number };
+
+        if ((hasExistingDecision.count || 0) > 0) {
+          throw new ConflictError(`Purchase order ${purchaseOrderId} already has an approval decision`);
+        }
+
+        if (Boolean(order.approvalRequired) && order.createdByUserId === input.approverUserId) {
+          throw new DatabaseError(
+            'Approver cannot approve their own purchase order',
+            'FORBIDDEN',
+            403,
+          );
+        }
+
+        const now = this.nowIso();
+        const nextStatus: PurchaseOrderStatus =
+          input.decision === 'Approved' ? 'Approved' : 'Cancelled';
+
+        this.db.db
+          .prepare(
+            `INSERT INTO purchase_order_approval_decisions (
+              purchase_order_id,
+              approver_user_id,
+              decision,
+              reason,
+              decided_at
+            ) VALUES (?, ?, ?, ?, ?)`,
+          )
+          .run(
+            purchaseOrderId,
+            input.approverUserId,
+            input.decision,
+            input.reason || null,
+            now,
+          );
+
+        if (nextStatus === 'Approved') {
+          this.db.db
+            .prepare(
+              `UPDATE purchase_orders
+               SET status = 'Approved',
+                   approved_at = ?,
+                   updated_at = ?
+               WHERE purchase_order_id = ?`,
+            )
+            .run(now, now, purchaseOrderId);
+        } else {
+          this.db.db
+            .prepare(
+              `UPDATE purchase_orders
+               SET status = 'Cancelled',
+                   cancelled_at = ?,
+                   updated_at = ?
+               WHERE purchase_order_id = ?`,
+            )
+            .run(now, now, purchaseOrderId);
+        }
+
+        this.db.db
+          .prepare(
+            `INSERT INTO purchase_order_status_transitions (
+              purchase_order_id,
+              from_status,
+              to_status,
+              changed_by_user_id,
+              changed_at,
+              reason
+            ) VALUES (?, 'Submitted', ?, ?, ?, ?)`,
+          )
+          .run(
+            purchaseOrderId,
+            nextStatus,
+            input.approverUserId,
+            now,
+            input.reason || `PO ${input.decision.toLowerCase()}`,
+          );
+      });
+
+      tx();
+
+      const decided = await this.findById(purchaseOrderId);
+      if (!decided) {
+        throw new DatabaseError('Failed to retrieve decided purchase order');
+      }
+
+      return decided;
     } catch (error) {
       if (
         error instanceof ValidationError ||

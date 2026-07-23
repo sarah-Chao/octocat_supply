@@ -98,3 +98,62 @@ describe('PurchaseOrder API contract (US1)', () => {
     expect(response.body.error.code).toBe('NOTIFICATION_FAILED');
   });
 });
+
+describe('PurchaseOrder API contract (US2)', () => {
+  beforeEach(async () => {
+    process.env.NODE_ENV = 'test';
+    await closeDatabase();
+    await getDatabase(true);
+    await runMigrations(true);
+    await seedDependencies();
+
+    app = express();
+    app.use(express.json());
+    app.use('/purchase-orders', purchaseOrderRouter);
+    app.use(errorHandler);
+  });
+
+  afterEach(async () => {
+    await closeDatabase();
+  });
+
+  it('POST /purchase-orders/{id}/approval-decisions returns 200 for non-creator approver', async () => {
+    const created = await request(app).post('/purchase-orders').send({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 101,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 75 }],
+    });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/submit`)
+      .send({ actorUserId: 101 });
+
+    const response = await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/approval-decisions`)
+      .send({ approverUserId: 202, decision: 'Approved' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('Approved');
+  });
+
+  it('POST /purchase-orders/{id}/approval-decisions returns 403 for creator self-approval', async () => {
+    const created = await request(app).post('/purchase-orders').send({
+      branchId: 1,
+      supplierId: 1,
+      createdByUserId: 101,
+      lineItems: [{ productId: 1, quantity: 300, expectedUnitPrice: 75 }],
+    });
+
+    await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/submit`)
+      .send({ actorUserId: 101 });
+
+    const response = await request(app)
+      .post(`/purchase-orders/${created.body.purchaseOrderId}/approval-decisions`)
+      .send({ approverUserId: 101, decision: 'Approved' });
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe('FORBIDDEN');
+  });
+});
