@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SuppliersRepository } from './suppliersRepo';
-import { NotFoundError } from '../utils/errors';
+import { NotFoundError, DatabaseError } from '../utils/errors';
 
 // Mock the getDatabase function first
 vi.mock('../db/sqlite', () => ({
@@ -53,6 +53,26 @@ describe('SuppliersRepository', () => {
 
             expect(result).toEqual([]);
         });
+
+        it('should convert SQLite integer 0/1 to boolean false/true for active and verified', async () => {
+            mockDb.all.mockResolvedValue([
+                { supplier_id: 1, name: 'Active Verified', description: '', contact_person: '', email: '', phone: '', active: 1, verified: 1 },
+                { supplier_id: 2, name: 'Inactive Unverified', description: '', contact_person: '', email: '', phone: '', active: 0, verified: 0 },
+            ]);
+
+            const result = await repository.findAll();
+
+            expect(result[0].active).toBe(true);
+            expect(result[0].verified).toBe(true);
+            expect(result[1].active).toBe(false);
+            expect(result[1].verified).toBe(false);
+        });
+
+        it('should propagate DatabaseError when db.all throws', async () => {
+            mockDb.all.mockRejectedValue(new Error('connection lost'));
+
+            await expect(repository.findAll()).rejects.toThrow(DatabaseError);
+        });
     });
 
     describe('findById', () => {
@@ -82,6 +102,23 @@ describe('SuppliersRepository', () => {
             const result = await repository.findById(999);
 
             expect(result).toBeNull();
+        });
+
+        it('should convert SQLite integer 0/1 to boolean false/true for active and verified', async () => {
+            mockDb.get.mockResolvedValue({
+                supplier_id: 5, name: 'Supplier', description: '', contact_person: '', email: '', phone: '', active: 0, verified: 1
+            });
+
+            const result = await repository.findById(5);
+
+            expect(result?.active).toBe(false);
+            expect(result?.verified).toBe(true);
+        });
+
+        it('should propagate DatabaseError when db.get throws', async () => {
+            mockDb.get.mockRejectedValue(new Error('disk I/O error'));
+
+            await expect(repository.findById(1)).rejects.toThrow(DatabaseError);
         });
     });
 
@@ -118,6 +155,24 @@ describe('SuppliersRepository', () => {
             expect(result.supplierId).toBe(2);
             expect(result.name).toBe('New Supplier');
         });
+
+        it('should throw an error when the inserted row cannot be retrieved', async () => {
+            mockDb.run.mockResolvedValue({ lastID: 3, changes: 1 });
+            // findById returns undefined – simulates a race or failed insert
+            mockDb.get.mockResolvedValue(undefined);
+
+            await expect(repository.create({
+                name: 'Ghost', description: '', contactPerson: '', email: '', phone: '', active: true, verified: false
+            })).rejects.toThrow('Failed to retrieve created supplier');
+        });
+
+        it('should propagate DatabaseError when db.run throws', async () => {
+            mockDb.run.mockRejectedValue(new Error('write failed'));
+
+            await expect(repository.create({
+                name: 'X', description: '', contactPerson: '', email: '', phone: '', active: true, verified: false
+            })).rejects.toThrow(DatabaseError);
+        });
     });
 
     describe('update', () => {
@@ -151,6 +206,21 @@ describe('SuppliersRepository', () => {
             await expect(repository.update(999, { name: 'Updated' }))
                 .rejects.toThrow(NotFoundError);
         });
+
+        it('should throw an error when updated row cannot be retrieved', async () => {
+            mockDb.run.mockResolvedValue({ changes: 1 });
+            mockDb.get.mockResolvedValue(undefined);
+
+            await expect(repository.update(1, { name: 'Ghost' }))
+                .rejects.toThrow('Failed to retrieve updated supplier');
+        });
+
+        it('should propagate DatabaseError when db.run throws', async () => {
+            mockDb.run.mockRejectedValue(new Error('write failed'));
+
+            await expect(repository.update(1, { name: 'Boom' }))
+                .rejects.toThrow(DatabaseError);
+        });
     });
 
     describe('delete', () => {
@@ -167,6 +237,12 @@ describe('SuppliersRepository', () => {
 
             await expect(repository.delete(999))
                 .rejects.toThrow(NotFoundError);
+        });
+
+        it('should propagate DatabaseError when db.run throws', async () => {
+            mockDb.run.mockRejectedValue(new Error('disk full'));
+
+            await expect(repository.delete(1)).rejects.toThrow(DatabaseError);
         });
     });
 
@@ -187,6 +263,20 @@ describe('SuppliersRepository', () => {
 
             expect(result).toBe(false);
         });
+
+        it('should return false when db.get returns undefined', async () => {
+            mockDb.get.mockResolvedValue(undefined);
+
+            const result = await repository.exists(1);
+
+            expect(result).toBe(false);
+        });
+
+        it('should propagate DatabaseError when db.get throws', async () => {
+            mockDb.get.mockRejectedValue(new Error('read error'));
+
+            await expect(repository.exists(1)).rejects.toThrow(DatabaseError);
+        });
     });
 
     describe('findByName', () => {
@@ -204,6 +294,36 @@ describe('SuppliersRepository', () => {
             );
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('Test Supplier');
+        });
+
+        it('should return empty array when no suppliers match', async () => {
+            mockDb.all.mockResolvedValue([]);
+
+            const result = await repository.findByName('NonExistent');
+
+            expect(result).toEqual([]);
+        });
+
+        it('should use %% pattern and return all suppliers when name is empty string', async () => {
+            const mockResults = [
+                { supplier_id: 1, name: 'Alpha', description: '', contact_person: '', email: '', phone: '', active: 1, verified: 1 },
+                { supplier_id: 2, name: 'Beta',  description: '', contact_person: '', email: '', phone: '', active: 1, verified: 0 },
+            ];
+            mockDb.all.mockResolvedValue(mockResults);
+
+            const result = await repository.findByName('');
+
+            expect(mockDb.all).toHaveBeenCalledWith(
+                'SELECT * FROM suppliers WHERE name LIKE ? ORDER BY name',
+                ['%%']
+            );
+            expect(result).toHaveLength(2);
+        });
+
+        it('should propagate DatabaseError when db.all throws', async () => {
+            mockDb.all.mockRejectedValue(new Error('table locked'));
+
+            await expect(repository.findByName('acme')).rejects.toThrow(DatabaseError);
         });
     });
 });
