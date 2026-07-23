@@ -148,11 +148,19 @@
 import express from 'express';
 import { Delivery } from '../models/delivery';
 import { exec } from 'child_process';
+import rateLimit from 'express-rate-limit';
 import { getDeliveriesRepository } from '../repositories/deliveriesRepo';
 import { NotFoundError } from '../utils/errors';
 
 
 const router = express.Router();
+
+const deliveryStatusUpdateRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Create a new delivery
 router.post('/', async (req, res, next) => {
@@ -192,7 +200,7 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // Update the status of a delivery
-router.put('/:id/status', async (req, res, next) => {
+router.put('/:id/status', deliveryStatusUpdateRateLimit, async (req, res, next) => {
   try {
     const { status, deliveryPartner } = req.body;
     const repo = await getDeliveriesRepository();
