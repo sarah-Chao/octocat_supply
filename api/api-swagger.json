@@ -1227,6 +1227,54 @@
                     }
                 }
             }
+        },
+        "/api/purchase-orders": {
+            "post": {
+                "summary": "Create a draft purchase order",
+                "tags": [
+                    "PurchaseOrders"
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Draft purchase order created successfully"
+                    }
+                }
+            }
+        },
+        "/api/purchase-orders/{id}": {
+            "get": {
+                "summary": "Get a purchase order by ID",
+                "tags": [
+                    "PurchaseOrders"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Purchase order found"
+                    },
+                    "404": {
+                        "description": "Purchase order not found"
+                    }
+                }
+            }
+        },
+        "/api/purchase-orders/{id}/submit": {
+            "post": {
+                "summary": "Submit a draft purchase order",
+                "tags": [
+                    "PurchaseOrders"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Purchase order submitted"
+                    },
+                    "409": {
+                        "description": "Invalid status transition"
+                    },
+                    "502": {
+                        "description": "Supplier notification dispatch failed"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1520,6 +1568,17 @@
                         "description": "Additional details about the supplier"
                     }
                 }
+            },
+            "PurchaseOrder": {
+                "type": "object",
+                "properties": {
+                    "purchaseOrderId": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    }
+                }
             }
         }
     },
@@ -1555,6 +1614,10 @@
         {
             "name": "Suppliers",
             "description": "API endpoints for managing suppliers"
+        },
+        {
+            "name": "PurchaseOrders",
+            "description": "API endpoints for managing purchase orders"
         }
     ]
 }

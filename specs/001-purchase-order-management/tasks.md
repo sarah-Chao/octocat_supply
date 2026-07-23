@@ -18,9 +18,9 @@
 
 **Purpose**: Prepare contract and documentation scaffolding for implementation.
 
-- [ ] T001 Align purchase-order contract details in specs/001-purchase-order-management/contracts/purchase-orders.openapi.yaml
-- [ ] T002 Prepare implementation task notes and mapping in specs/001-purchase-order-management/plan.md
-- [ ] T003 [P] Add purchase-order API section placeholder in api/api-swagger.json
+- [x] T001 Align purchase-order contract details in specs/001-purchase-order-management/contracts/purchase-orders.openapi.yaml
+- [x] T002 Prepare implementation task notes and mapping in specs/001-purchase-order-management/plan.md
+- [x] T003 [P] Add purchase-order API section placeholder in api/api-swagger.json
 
 ---
 
@@ -30,15 +30,15 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Create purchase-order tables and constraints migration in api/database/migrations/004_create_purchase_orders.sql
-- [ ] T005 [P] Add purchase-order TypeScript models in api/src/models/purchaseOrder.ts
-- [ ] T006 [P] Add purchase-order line item model in api/src/models/purchaseOrderLineItem.ts
-- [ ] T007 [P] Add approval decision model in api/src/models/purchaseOrderApprovalDecision.ts
-- [ ] T008 [P] Add supplier notification event model in api/src/models/supplierNotificationEvent.ts
-- [ ] T009 Implement repository base CRUD/query methods in api/src/repositories/purchaseOrdersRepo.ts
-- [ ] T010 Implement lifecycle transition guard helpers in api/src/repositories/purchaseOrdersRepo.ts
-- [ ] T011 Register purchase-order route wiring in api/src/index.ts
-- [ ] T012 Add repository integration test scaffold with real SQLite setup in api/src/repositories/purchaseOrdersRepo.test.ts
+- [x] T004 Create purchase-order tables and constraints migration in api/database/migrations/004_create_purchase_orders.sql
+- [x] T005 [P] Add purchase-order TypeScript models in api/src/models/purchaseOrder.ts
+- [x] T006 [P] Add purchase-order line item model in api/src/models/purchaseOrderLineItem.ts
+- [x] T007 [P] Add approval decision model in api/src/models/purchaseOrderApprovalDecision.ts
+- [x] T008 [P] Add supplier notification event model in api/src/models/supplierNotificationEvent.ts
+- [x] T009 Implement repository base CRUD/query methods in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T010 Implement lifecycle transition guard helpers in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T011 Register purchase-order route wiring in api/src/index.ts
+- [x] T012 Add repository integration test scaffold with real SQLite setup in api/src/repositories/purchaseOrdersRepo.test.ts
 
 **Checkpoint**: Foundation ready; user stories can proceed.
 
@@ -52,18 +52,18 @@
 
 ### Tests for User Story 1 (REQUIRED) ⚠️
 
-- [ ] T013 [P] [US1] Add OpenAPI contract test for create and submit endpoints in api/src/routes/purchaseOrder.contract.test.ts
-- [ ] T014 [P] [US1] Add route integration tests for draft creation and validation failures in api/src/routes/purchaseOrder.test.ts
-- [ ] T015 [P] [US1] Add repository integration tests for submit transaction and rollback-on-notification-failure in api/src/repositories/purchaseOrdersRepo.test.ts
+- [x] T013 [P] [US1] Add OpenAPI contract test for create and submit endpoints in api/src/routes/purchaseOrder.contract.test.ts
+- [x] T014 [P] [US1] Add route integration tests for draft creation and validation failures in api/src/routes/purchaseOrder.test.ts
+- [x] T015 [P] [US1] Add repository integration tests for submit transaction and rollback-on-notification-failure in api/src/repositories/purchaseOrdersRepo.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Implement create draft purchase-order route handler in api/src/routes/purchaseOrder.ts
-- [ ] T017 [US1] Implement submit purchase-order route handler with idempotency checks in api/src/routes/purchaseOrder.ts
-- [ ] T018 [US1] Implement draft validation, totals recomputation, and line-item rules in api/src/repositories/purchaseOrdersRepo.ts
-- [ ] T019 [US1] Implement submission-critical supplier notification dispatch with transaction rollback in api/src/repositories/purchaseOrdersRepo.ts
-- [ ] T020 [US1] Add status transition persistence for Draft->Submitted in api/src/repositories/purchaseOrdersRepo.ts
-- [ ] T021 [US1] Expose purchase-order routes from API router entrypoint in api/src/index.ts
+- [x] T016 [US1] Implement create draft purchase-order route handler in api/src/routes/purchaseOrder.ts
+- [x] T017 [US1] Implement submit purchase-order route handler with idempotency checks in api/src/routes/purchaseOrder.ts
+- [x] T018 [US1] Implement draft validation, totals recomputation, and line-item rules in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T019 [US1] Implement submission-critical supplier notification dispatch with transaction rollback in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T020 [US1] Add status transition persistence for Draft->Submitted in api/src/repositories/purchaseOrdersRepo.ts
+- [x] T021 [US1] Expose purchase-order routes from API router entrypoint in api/src/index.ts
 
 **Checkpoint**: User Story 1 is independently functional and testable.
 
