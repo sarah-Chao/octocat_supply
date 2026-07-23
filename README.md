@@ -1,4 +1,4 @@
-# Octocat Supply Demo App
+# 🚀🚀 Octocat Supply Demo App
 
 This repository contains a demo app and related content for learning GitHub Copilot.
 

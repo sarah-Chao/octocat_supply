@@ -23,10 +23,13 @@ echo "📦 Auto-committing changes from Copilot session..."
 # Stage all changes
 git add -A
 
-# Create timestamped commit
+# Create timestamped commit with Copilot co-author trailer
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-git commit -m "[Checkpoint-commit] $TIMESTAMP" --no-verify 2>/dev/null || {
-  echo "⚠️  Commit failed"
+
+git commit -m "[Checkpoint-commit] $TIMESTAMP
+
+Co-authored-by: GitHub Copilot <copilot@github.com>" --no-verify 2>/dev/null || {
+  echo "⚠️ Commit failed"
   exit 0
 }
 
