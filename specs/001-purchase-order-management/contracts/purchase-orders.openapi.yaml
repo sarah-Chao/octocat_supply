@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: Purchase Order API Contract
+  version: 0.1.0
+  description: Contract for purchase-order lifecycle endpoints.
+servers:
+  - url: /api
+paths:
+  /purchase-orders:
+    post:
+      summary: Create a draft purchase order
+      operationId: createPurchaseOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePurchaseOrderRequest'
+      responses:
+        '201':
+          description: Draft purchase order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '400':
+          description: Validation error
+  /purchase-orders/{purchaseOrderId}:
+    get:
+      summary: Get purchase order details
+      operationId: getPurchaseOrder
+      parameters:
+        - $ref: '#/components/parameters/PurchaseOrderId'
+      responses:
+        '200':
+          description: Purchase order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '404':
+          description: Not found
+  /purchase-orders/{purchaseOrderId}/submit:
+    post:
+      summary: Submit a draft purchase order
+      operationId: submitPurchaseOrder
+      parameters:
+        - $ref: '#/components/parameters/PurchaseOrderId'
+      responses:
+        '200':
+          description: Purchase order submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '409':
+          description: Invalid state transition or idempotent submit conflict
+        '502':
+          description: Supplier notification dispatch failed; submission rolled back
+  /purchase-orders/{purchaseOrderId}/approval-decisions:
+    post:
+      summary: Approve or reject a submitted approval-required purchase order
+      operationId: decidePurchaseOrderApproval
+      parameters:
+        - $ref: '#/components/parameters/PurchaseOrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalDecisionRequest'
+      responses:
+        '200':
+          description: Approval decision applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '403':
+          description: Actor not authorized or violates separation of duties
+        '409':
+          description: Invalid decision state
+  /purchase-orders/{purchaseOrderId}/fulfill:
+    post:
+      summary: Mark an approved purchase order as fulfilled
+      operationId: fulfillPurchaseOrder
+      parameters:
+        - $ref: '#/components/parameters/PurchaseOrderId'
+      responses:
+        '200':
+          description: Purchase order fulfilled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '409':
+          description: Invalid state transition
+  /purchase-orders/{purchaseOrderId}/cancel:
+    post:
+      summary: Cancel a draft or submitted purchase order
+      operationId: cancelPurchaseOrder
+      parameters:
+        - $ref: '#/components/parameters/PurchaseOrderId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Purchase order cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '409':
+          description: Invalid state transition
+components:
+  parameters:
+    PurchaseOrderId:
+      name: purchaseOrderId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    PurchaseOrder:
+      type: object
+      required:
+        - id
+        - branchId
+        - supplierId
+        - status
+        - totalAmount
+        - lineItems
+      properties:
+        id:
+          type: string
+        branchId:
+          type: string
+        supplierId:
+          type: string
+        createdByUserId:
+          type: string
+        status:
+          type: string
+          enum: [Draft, Submitted, Approved, Fulfilled, Cancelled]
+        approvalRequired:
+          type: boolean
+        totalAmount:
+          type: number
+          format: double
+        currencyCode:
+          type: string
+          example: USD
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        fulfilledAt:
+          type: string
+          format: date-time
+          nullable: true
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseOrderLineItem'
+        approvalDecision:
+          $ref: '#/components/schemas/ApprovalDecision'
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusTransition'
+    PurchaseOrderLineItem:
+      type: object
+      required:
+        - productId
+        - quantity
+        - expectedUnitPrice
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        expectedUnitPrice:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+        lineTotal:
+          type: number
+          format: double
+    CreatePurchaseOrderRequest:
+      type: object
+      required:
+        - branchId
+        - supplierId
+        - createdByUserId
+        - lineItems
+      properties:
+        branchId:
+          type: string
+        supplierId:
+          type: string
+        createdByUserId:
+          type: string
+        lineItems:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PurchaseOrderLineItem'
+    ApprovalDecisionRequest:
+      type: object
+      required:
+        - approverUserId
+        - decision
+      properties:
+        approverUserId:
+          type: string
+        decision:
+          type: string
+          enum: [Approved, Rejected]
+        reason:
+          type: string
+    ApprovalDecision:
+      type: object
+      properties:
+        approverUserId:
+          type: string
+        decision:
+          type: string
+          enum: [Approved, Rejected]
+        reason:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+    StatusTransition:
+      type: object
+      properties:
+        fromStatus:
+          type: string
+          nullable: true
+        toStatus:
+          type: string
+        changedByUserId:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
