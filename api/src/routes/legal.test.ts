@@ -7,9 +7,7 @@ const HUMAN_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const BOT_UA = 'Googlebot/2.1 (+http://www.google.com/bot.html)';
 
-let app: express.Express;
-
-app = express();
+const app: express.Express = express();
 app.use(express.json());
 app.use('/legal', legalRouter);
 

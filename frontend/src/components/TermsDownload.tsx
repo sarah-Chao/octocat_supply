@@ -19,7 +19,9 @@ export function TermsDownload() {
 
     fetch(`${API_BASE_URL}/api/legal/terms`, { signal: controller.signal })
       .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch documents');
+        if (!res.ok) {
+          throw new Error('Failed to fetch documents');
+        }
         return res.json();
       })
       .then(data => {
@@ -48,12 +50,14 @@ export function TermsDownload() {
     );
   }
 
-  if (error) return (
+  if (error) {
+    return (
       <div className="p-6 bg-red-50 rounded-lg border border-red-200">
         <h2 className="text-xl font-semibold text-red-800 mb-2">Error</h2>
         <p className="text-red-600">{error}</p>
       </div>
     );
+  }
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
