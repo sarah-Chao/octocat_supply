@@ -74,11 +74,9 @@ export class UserDetailsRepository {
       const { sql, values } = buildInsertSQL('user_details', userDetail);
       const result = await this.db.run(sql, values);
       const { lastID } = result;
-
       if (typeof lastID !== 'number') {
         throw new Error('Failed to determine created user detail ID');
       }
-
       const createdUserDetail = await this.findById(lastID);
       if (!createdUserDetail) {
         throw new Error('Failed to retrieve created user detail');
