@@ -119,11 +119,11 @@
 
 **Purpose**: Final consistency, documentation, and validation across all stories.
 
-- [ ] T036 [P] Update API Swagger output and purchase-order endpoint docs in api/api-swagger.json
-- [ ] T037 [P] Update feature quickstart verification notes after implementation in specs/001-purchase-order-management/quickstart.md
-- [ ] T038 Run focused purchase-order route and repository test suites in api/src/routes/purchaseOrder.test.ts
-- [ ] T039 Run focused purchase-order contract tests in api/src/routes/purchaseOrder.contract.test.ts
-- [ ] T040 Run full API test pass to verify no regressions in api/package.json
+- [x] T036 [P] Update API Swagger output and purchase-order endpoint docs in api/api-swagger.json
+- [x] T037 [P] Update feature quickstart verification notes after implementation in specs/001-purchase-order-management/quickstart.md
+- [x] T038 Run focused purchase-order route and repository test suites in api/src/routes/purchaseOrder.test.ts
+- [x] T039 Run focused purchase-order contract tests in api/src/routes/purchaseOrder.contract.test.ts
+- [x] T040 Run full API test pass to verify no regressions in api/package.json
 
 ---
 

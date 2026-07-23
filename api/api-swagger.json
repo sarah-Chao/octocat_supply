@@ -1234,9 +1234,29 @@
                 "tags": [
                     "PurchaseOrders"
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreatePurchaseOrderRequest"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
-                        "description": "Draft purchase order created successfully"
+                        "description": "Draft purchase order created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PurchaseOrder"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error"
                     }
                 }
             }
@@ -1247,9 +1267,27 @@
                 "tags": [
                     "PurchaseOrders"
                 ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Purchase order ID"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Purchase order found"
+                        "description": "Purchase order found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PurchaseOrder"
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "Purchase order not found"
@@ -1263,15 +1301,167 @@
                 "tags": [
                     "PurchaseOrders"
                 ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Purchase order ID"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Purchase order submitted"
+                        "description": "Purchase order submitted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PurchaseOrder"
+                                }
+                            }
+                        }
                     },
                     "409": {
                         "description": "Invalid status transition"
                     },
                     "502": {
                         "description": "Supplier notification dispatch failed"
+                    }
+                }
+            }
+        },
+        "/api/purchase-orders/{id}/approval-decisions": {
+            "post": {
+                "summary": "Apply approval decision for a submitted purchase order",
+                "tags": [
+                    "PurchaseOrders"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Purchase order ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ApprovalDecisionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Approval decision applied",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PurchaseOrder"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Approval forbidden due to separation-of-duties policy"
+                    },
+                    "404": {
+                        "description": "Purchase order not found"
+                    },
+                    "409": {
+                        "description": "Invalid state transition"
+                    }
+                }
+            }
+        },
+        "/api/purchase-orders/{id}/fulfill": {
+            "post": {
+                "summary": "Mark an approved purchase order as fulfilled",
+                "tags": [
+                    "PurchaseOrders"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Purchase order ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Purchase order fulfilled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PurchaseOrder"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Purchase order not found"
+                    },
+                    "409": {
+                        "description": "Invalid state transition"
+                    }
+                }
+            }
+        },
+        "/api/purchase-orders/{id}/cancel": {
+            "post": {
+                "summary": "Cancel a draft or submitted purchase order",
+                "tags": [
+                    "PurchaseOrders"
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Purchase order ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CancelPurchaseOrderRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Purchase order cancelled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PurchaseOrder"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Purchase order not found"
+                    },
+                    "409": {
+                        "description": "Invalid state transition"
                     }
                 }
             }
@@ -1571,11 +1761,294 @@
             },
             "PurchaseOrder": {
                 "type": "object",
+                "required": [
+                    "purchaseOrderId",
+                    "branchId",
+                    "supplierId",
+                    "createdByUserId",
+                    "status",
+                    "approvalRequired",
+                    "currencyCode",
+                    "totalAmount",
+                    "lineItems",
+                    "transitions",
+                    "notificationEvents"
+                ],
                 "properties": {
                     "purchaseOrderId": {
                         "type": "integer"
                     },
+                    "branchId": {
+                        "type": "integer"
+                    },
+                    "supplierId": {
+                        "type": "integer"
+                    },
+                    "createdByUserId": {
+                        "type": "integer"
+                    },
                     "status": {
+                        "type": "string",
+                        "enum": [
+                            "Draft",
+                            "Submitted",
+                            "Approved",
+                            "Fulfilled",
+                            "Cancelled"
+                        ]
+                    },
+                    "approvalRequired": {
+                        "type": "boolean"
+                    },
+                    "currencyCode": {
+                        "type": "string"
+                    },
+                    "totalAmount": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "submittedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "approvedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "fulfilledAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "cancelledAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "lineItems": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PurchaseOrderLineItem"
+                        }
+                    },
+                    "approvalDecision": {
+                        "$ref": "#/components/schemas/PurchaseOrderApprovalDecision"
+                    },
+                    "transitions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PurchaseOrderStatusTransition"
+                        }
+                    },
+                    "notificationEvents": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SupplierNotificationEvent"
+                        }
+                    }
+                }
+            },
+            "CreatePurchaseOrderRequest": {
+                "type": "object",
+                "required": [
+                    "branchId",
+                    "supplierId",
+                    "createdByUserId",
+                    "lineItems"
+                ],
+                "properties": {
+                    "branchId": {
+                        "type": "integer"
+                    },
+                    "supplierId": {
+                        "type": "integer"
+                    },
+                    "createdByUserId": {
+                        "type": "integer"
+                    },
+                    "currencyCode": {
+                        "type": "string"
+                    },
+                    "lineItems": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "$ref": "#/components/schemas/PurchaseOrderLineItem"
+                        }
+                    }
+                }
+            },
+            "PurchaseOrderLineItem": {
+                "type": "object",
+                "required": [
+                    "productId",
+                    "quantity",
+                    "expectedUnitPrice"
+                ],
+                "properties": {
+                    "purchaseOrderLineItemId": {
+                        "type": "integer"
+                    },
+                    "purchaseOrderId": {
+                        "type": "integer"
+                    },
+                    "productId": {
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "expectedUnitPrice": {
+                        "type": "number",
+                        "format": "float",
+                        "exclusiveMinimum": 0
+                    },
+                    "lineTotal": {
+                        "type": "number",
+                        "format": "float"
+                    }
+                }
+            },
+            "ApprovalDecisionRequest": {
+                "type": "object",
+                "required": [
+                    "approverUserId",
+                    "decision"
+                ],
+                "properties": {
+                    "approverUserId": {
+                        "type": "integer"
+                    },
+                    "decision": {
+                        "type": "string",
+                        "enum": [
+                            "Approved",
+                            "Rejected"
+                        ]
+                    },
+                    "reason": {
+                        "type": "string"
+                    }
+                }
+            },
+            "PurchaseOrderApprovalDecision": {
+                "type": "object",
+                "properties": {
+                    "purchaseOrderApprovalDecisionId": {
+                        "type": "integer"
+                    },
+                    "purchaseOrderId": {
+                        "type": "integer"
+                    },
+                    "approverUserId": {
+                        "type": "integer"
+                    },
+                    "decision": {
+                        "type": "string",
+                        "enum": [
+                            "Approved",
+                            "Rejected"
+                        ]
+                    },
+                    "reason": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "decidedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "PurchaseOrderStatusTransition": {
+                "type": "object",
+                "properties": {
+                    "purchaseOrderStatusTransitionId": {
+                        "type": "integer"
+                    },
+                    "purchaseOrderId": {
+                        "type": "integer"
+                    },
+                    "fromStatus": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "toStatus": {
+                        "type": "string",
+                        "enum": [
+                            "Draft",
+                            "Submitted",
+                            "Approved",
+                            "Fulfilled",
+                            "Cancelled"
+                        ]
+                    },
+                    "changedByUserId": {
+                        "type": "integer"
+                    },
+                    "changedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "SupplierNotificationEvent": {
+                "type": "object",
+                "properties": {
+                    "supplierNotificationEventId": {
+                        "type": "integer"
+                    },
+                    "purchaseOrderId": {
+                        "type": "integer"
+                    },
+                    "supplierId": {
+                        "type": "integer"
+                    },
+                    "eventType": {
+                        "type": "string",
+                        "enum": [
+                            "PO_SUBMITTED"
+                        ]
+                    },
+                    "dispatchStatus": {
+                        "type": "string",
+                        "enum": [
+                            "Succeeded",
+                            "Failed"
+                        ]
+                    },
+                    "dispatchedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "failureReason": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "CancelPurchaseOrderRequest": {
+                "type": "object",
+                "properties": {
+                    "actorUserId": {
+                        "type": "integer"
+                    },
+                    "reason": {
                         "type": "string"
                     }
                 }

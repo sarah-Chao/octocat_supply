@@ -98,9 +98,15 @@ Expected result: idempotency guarantee is preserved.
 
 ```bash
 cd api
-npm test -- src/routes/purchaseOrder.test.ts
-npm test -- src/repositories/purchaseOrdersRepo.test.ts
-npm test -- src/routes/purchaseOrder.contract.test.ts
+npx vitest run src/repositories/purchaseOrdersRepo.test.ts src/routes/purchaseOrder.test.ts
+npx vitest run src/routes/purchaseOrder.contract.test.ts
+```
+
+## Full Regression Command
+
+```bash
+cd api
+npm test
 ```
 
 ## Exit Criteria
@@ -109,3 +115,4 @@ npm test -- src/routes/purchaseOrder.contract.test.ts
 - All SQLite-backed integration tests pass.
 - OpenAPI contract and route behavior stay consistent.
 - Governance controls (approval threshold, separation of duties, rollback-on-notify-failure) are validated.
+- Lifecycle controls (fulfillment rules, cancellation paths, terminal-state guards, and notification uniqueness) are validated.
