@@ -134,7 +134,7 @@ router.get('/:id', async (req, res, next) => {
     const repo = await getBranchesRepository();
     const branch = await repo.findById(parseInt(req.params.id));
     if (branch) {
-      res.json(null);
+      res.json(branch);
     } else {
       res.status(404).send('Branch not found');
     }
