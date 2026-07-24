@@ -8,6 +8,7 @@ permissions:
   issues: read
   pull-requests: read
   metadata: read
+  models: read
 safe-outputs:
   create-issue:
     title-prefix: "[daily activity] "

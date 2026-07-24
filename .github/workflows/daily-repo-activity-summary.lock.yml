@@ -68,6 +68,7 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
+      models: read
     concurrency:
       group: "gh-aw-copilot-${{ github.workflow }}"
     env:
