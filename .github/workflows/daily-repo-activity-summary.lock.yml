@@ -385,6 +385,7 @@ jobs:
       issues: read
       models: read
       pull-requests: read
+      models: read
     concurrency:
       group: "gh-aw-copilot-${{ github.workflow }}"
       queue: max
