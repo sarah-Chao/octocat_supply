@@ -23,6 +23,7 @@ safe-outputs:
       - "/tmp/gh-aw/agent/multi-device-screenshots"
     max-uploads: 10
   noop:
+    report-as-issue: false
 timeout-minutes: 45
 ---
 

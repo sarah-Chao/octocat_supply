@@ -34,6 +34,7 @@ safe-outputs:
   assign-to-agent:
     allowed: [copilot]
   noop:
+    report-as-issue: false
 network: {}
 ---
 
